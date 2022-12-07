@@ -301,6 +301,97 @@ Setelah itu restart bind9 dengan `service bind9 restart`
 <img width="431" alt="testingdhcp4" src="https://user-images.githubusercontent.com/94334247/206196868-a5b27c3f-e53f-4b32-9c9d-2982c87c5167.PNG">
 
 
+## Soal
+
+## (1) iptables pada **Strix** tanpa `MASQUERADE`
+
+`MASQUERADE` dapat diganti dengan `SNAT` dengan tambahan `--to-source` dengan IP dari Strix sendiri yaitu `192.168.122.11`, syntaxnya adalah
+
+```
+iptables -t nat -A POSTROUTING -s 192.205.0.0/21 -o eth0 -j SNAT --to-source 192.168.122.11
+```
+
+### Testing
+
+#### Eden
+<img width="436" alt="1eden" src="https://user-images.githubusercontent.com/94334247/206197839-2cbc947e-e1db-48bf-bf7e-e0c1569e639d.PNG">
+
+#### Garden
+<img width="431" alt="1gerden" src="https://user-images.githubusercontent.com/94334247/206197906-53f77404-d8db-4ce5-b3e5-70502870f6f8.PNG">
+
+#### Ostania
+<img width="428" alt="1ostania" src="https://user-images.githubusercontent.com/94334247/206197980-68ce5077-ddc0-498c-a0f2-b0ae3d8b2f93.PNG">
+
+### SSS
+<img width="430" alt="1ss" src="https://user-images.githubusercontent.com/94334247/206198130-dd029917-a2c6-4aba-82a3-4fbc82a97283.PNG">
+
+
+## (2) Drop semua TCP dan UDP pada DHCP Server
+
+Pada **Strix** dilakukan konfigurasi firewall sebagai berikut
+
+```
+iptables -A FORWARD -p tcp -d 192.205.0.115 -i eth0 -j DROP # Drop semua TCP
+iptables -A FORWARD -p udp -d 192.205.0.115 -i eth0 -j DROP # Drop semua UD
+```
+
+iptables di atas akan melalukan drop pada semua TCP dan UDP dengan tujuan **WISE** yang memiliki IP address `192.205.0.155`
+
+### Testing
+
+#### Ping google.com pada WISE setelah iptables
+<img width="433" alt="2wise" src="https://user-images.githubusercontent.com/94334247/206198991-a33e8944-72e0-45d9-9f84-778f30839f67.PNG">
+
+#### Netcat **WISE** dengan **Strix** menggunakan port 18
+Pada Strix
+<img width="423" alt="2strix" src="https://user-images.githubusercontent.com/94334247/206199099-75aaf983-22d8-4cb4-a8e9-0e67f8d59499.PNG">
+
+Pada Wise
+<img width="421" alt="2wiseb" src="https://user-images.githubusercontent.com/94334247/206199185-9b6c273a-90ea-464b-a1da-caee286f1e53.PNG">
+
+## (3) Membatasi DHCP dan DNS Server hanya boleh menerima maksimal 2 koneksi ICMP secara bersamaan
+
+Limit koneksi ICMP dengan iptables pada **WISE** sebagai DHCP Server dan **Eden** sebagai DNS Server
+
+```
+iptables -A INPUT -p icmp -m connlimit --connlimit-above 2 --connlimit-mask 0 -j DROP
+```
+
+### Testing ping Eden (192.205.0.114) sebagai DNS Server dengan 3 client
+
+#### Briar
+<img width="422" alt="3briar" src="https://user-images.githubusercontent.com/94334247/206199412-5403e6ff-349f-4980-b92d-917e66a0d9cb.PNG">
+
+#### Desmond
+<img width="416" alt="3desmon" src="https://user-images.githubusercontent.com/94334247/206199471-9d0d2b09-ffc9-47c9-abfc-23976ca3fd8b.PNG">
+
+#### Forger
+<img width="417" alt="3forger" src="https://user-images.githubusercontent.com/94334247/206199512-caef9a35-f1b6-45b8-845f-43e613bcbbfa.PNG">
+
+## (4) Akses menuju Web Server hanya diperbolehkan disaat jam kerja yaitu Senin sampai Jumat pada pukul 07.00 - 16.00
+
+Pada **Garden** dan **SSS** sebagai Web Server, dibuat firewall sebagai berikut
+
+```
+iptables -A INPUT -m time --timestart 07:00 --timestop 16:00 --weekdays Mon,Tue,Wed,Thu,Fri -j ACCEPT
+iptables -A INPUT -j REJECT
+```
+
+### Testing
+
+Ping **Garden** (192.205.0.122) pada jam kerja
+<img width="421" alt="4harikerja" src="https://user-images.githubusercontent.com/94334247/206199672-20d489e0-2488-45b6-9b5a-a7eda721aeac.PNG">
+
+Ping **Garden** (192.205.0.122) pada hari libur
+<img width="415" alt="4harilibur" src="https://user-images.githubusercontent.com/94334247/206199819-207ef04d-2529-48c6-94e1-6024fa7d8012.PNG">
+
+## (5) Karena kita memiliki 2 Web Server, Loid ingin Ostania diatur sehingga setiap request dari client yang mengakses Garden dengan port 80 akan didistribusikan secara bergantian pada SSS dan Garden secara berurutan dan request dari client yang mengakses SSS dengan port 443 akan didistribusikan secara bergantian pada Garden dan SSS secara berurutan.
+
+## (6) Karena Loid ingin tau paket apa saja yang di-drop, maka di setiap node server dan router ditambahkan logging paket yang di-drop dengan standard syslog level.
+
+
+
+
 
 
 
