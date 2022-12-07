@@ -337,16 +337,20 @@ iptables -A FORWARD -p udp -d 192.205.0.115 -i eth0 -j DROP # Drop semua UD
 
 iptables di atas akan melalukan drop pada semua TCP dan UDP dengan tujuan **WISE** yang memiliki IP address `192.205.0.155`
 
+
 ### Testing
 
 #### Ping google.com pada WISE setelah iptables
 <img width="433" alt="2wise" src="https://user-images.githubusercontent.com/94334247/206198991-a33e8944-72e0-45d9-9f84-778f30839f67.PNG">
 
 #### Netcat **WISE** dengan **Strix** menggunakan port 18
+
 Pada Strix
+
 <img width="423" alt="2strix" src="https://user-images.githubusercontent.com/94334247/206199099-75aaf983-22d8-4cb4-a8e9-0e67f8d59499.PNG">
 
 Pada Wise
+
 <img width="421" alt="2wiseb" src="https://user-images.githubusercontent.com/94334247/206199185-9b6c273a-90ea-464b-a1da-caee286f1e53.PNG">
 
 ## (3) Membatasi DHCP dan DNS Server hanya boleh menerima maksimal 2 koneksi ICMP secara bersamaan
