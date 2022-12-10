@@ -391,12 +391,51 @@ Ping **Garden** (192.205.0.122) pada hari libur
 
 <img width="415" alt="4harilibur" src="https://user-images.githubusercontent.com/94334247/206199819-207ef04d-2529-48c6-94e1-6024fa7d8012.PNG">
 
-## (5) Karena kita memiliki 2 Web Server, Loid ingin Ostania diatur sehingga setiap request dari client yang mengakses Garden dengan port 80 akan didistribusikan secara bergantian pada SSS dan Garden secara berurutan dan request dari client yang mengakses SSS dengan port 443 akan didistribusikan secara bergantian pada Garden dan SSS secara berurutan.
+## (5)Karena kita memiliki 2 Web Server, Loid ingin Ostania diatur sehingga setiap request dari client yang mengakses Garden dengan port 80 akan didistribusikan secara bergantian pada SSS dan Garden secara berurutan dan request dari client yang mengakses SSS dengan port 443 akan didistribusikan secara bergantian pada Garden dan SSS secara berurutan.
+Pertama, konfigurasi untuk masing-masing node dengan port untuk request masing-masing node adalah 80 dan 443 dengan menggunakan ```--dport``` karena saat terjadi request akan terdistribus antara SSS & Garden. Untuk mendistribusikan maka menggunakan ```--every 2``` dan diarahkan pada node sasaran distribusi dengan ```--to-destination```.
 
-## (6) Karena Loid ingin tau paket apa saja yang di-drop, maka di setiap node server dan router ditambahkan logging paket yang di-drop dengan standard syslog level.
+#### Pada Ostania
+```
+iptables -A PREROUTING -t nat -p tcp --dport 80 -d 192.205.0.122 -m statistic --mode nth --every 2 --packet 0 -j DNAT --to-destination 192.205.0.122:80
+iptables -A PREROUTING -t nat -p tcp --dport 80 -d 192.205.0.122 -j DNAT --to-destination 192.205.0.123:80
+iptables -A PREROUTING -t nat -p tcp --dport 443 -d 192.205.0.123 -m statistic --mode nth --every 2 --packet 0 -j DNAT --to-destination 192.205.0.123
+iptables -A PREROUTING -t nat -p tcp --dport 443 -d 192.205.0.123 -j DNAT --to-destination 192.205.0.122:443
+```
+#### testing
+![image](https://user-images.githubusercontent.com/94334247/206864027-28103a3c-1be9-4e7f-8286-374e52392a59.png)
 
 
+## (6)Karena Loid ingin tau paket apa saja yang di-drop, maka di setiap node server dan router ditambahkan logging paket yang di-drop dengan standard syslog level.
+#### Pada WISE  
+```
+service isc-dhcp-server restart
+service isc-dhcp-server restart
+iptables -N LOGGING
+iptables -A INPUT -p icmp -m connlimit --connlimit-above 2 --connlimit-mask 0 -j LOGGING
+iptables -A LOGGING -j LOG --log-prefix "IPTables-Dropped: "
+iptables -A LOGGING -j DROP
+service rsyslog restart
+```
 
+Pertama, kita restart dulu DHCP di ```WISE```. Lalu tambahkan syntax ```sylog``` untuk melihat paket yang di drop.
+
+#### Pada Node lainnya
+```
+iptables -A INPUT -m time --timestart 07:00 --timestop 16:00 --weekdays Mon,Tue,Wed,Thu,Fri -j ACCEPT
+iptables -N LOGGING
+iptables -A INPUT -j LOGGING
+iptables -A LOGGING -j LOG --log-prefix "IPTables-Rejected: "
+iptables -A LOGGING -j REJECT
+```
+
+#### Pada   WISE
+![image](https://user-images.githubusercontent.com/94334247/206863489-ee02f908-1992-4014-855a-eb15e50fffba.png)
+
+#### Pada SSS
+![image](https://user-images.githubusercontent.com/94334247/206863545-fb209917-bfb1-4cac-ad84-3fa8c99d7cf1.png)
+
+#### Pada Blackbell
+![image](https://user-images.githubusercontent.com/94334247/206863584-4fa22780-3c68-4278-9e56-7b1ec2f402c3.png)
 
 
 
